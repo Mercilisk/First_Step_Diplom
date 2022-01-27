@@ -1,0 +1,2 @@
+cobs.c:16:8:cobs_encode	40	static
+cobs.c:60:8:cobs_decode	40	static
