@@ -12,6 +12,7 @@
 #include <stddef.h>
 
 /* HAL */
+#include "stm32f1xx_hal.h"
 #include "stm32f1xx_hal_uart.h"
 /* FreeRTOS */
 #include "FreeRTOS.h"

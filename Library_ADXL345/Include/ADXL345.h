@@ -14,6 +14,7 @@
 #include <string.h>
 #include "stm32f1xx.h"
 #include "stm32f1xx_hal_spi.h"
+#include "main.h"
 
 #define ADXL345_DEVICE_ADDRESS	  0x53
 
@@ -23,7 +24,7 @@
 #define DEVID_ID			((uint8_t) 0x00)
 #define THRESH_TAP			((uint8_t) 0x1D)
 #define OFSX 			    ((uint8_t) 0x1E)
-#define OFSY 				((uint8_t) 0x0F)
+#define OFSY 				((uint8_t) 0x1F)
 #define OFSZ 				((uint8_t) 0x20)
 #define DUR 				((uint8_t) 0x21)
 #define Latent 				((uint8_t) 0x22)
@@ -218,7 +219,7 @@ typedef struct
 void regWrite(uint8_t Reg, uint8_t Value);
 void regRead(uint8_t Reg, uint8_t *Value, uint16_t ByteSize);
 
-ADXL_Status ADXL345_Init(ADXL_ConfigTypeDef_t *ADXL, SPI_HandleTypeDef SPIHandle);
+ADXL_Status ADXL345_Init(ADXL_ConfigTypeDef_t *ADXL, SPI_HandleTypeDef *hspi);
 int16_t ADXL345_GetValue(uint8_t Axis);
 float ADXL345_GetGValue(uint8_t Axis);
 void ADXL345_MeasureON();

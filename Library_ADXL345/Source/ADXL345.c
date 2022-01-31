@@ -6,8 +6,9 @@
  */
 #include "ADXL345.h"
 
-static SPI_HandleTypeDef ADXL345_SPI;
+static SPI_HandleTypeDef *ADXL345_SPI;
 
+#define M_G 9.80665
 
 float ScaleFactor = 1/256.0f;
 
@@ -21,13 +22,16 @@ uint8_t 	ADXL345_To_Master_OK	=	0;
  *
  * @retval Void
  */
+
 void regWrite(uint8_t Reg, uint8_t Value)
 {
 	uint8_t WriteData[2] = {0};
-	WriteData[0] = Reg;
+	WriteData[0] = Reg & ( ~(1<<7u) ) /*| 1<<6u;*/& ( ~(1<<6u) );
 	WriteData[1] = Value;
 
-	HAL_SPI_Transmit_IT(&ADXL345_SPI, (uint8_t *) &WriteData, 2);
+	HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
+
+	HAL_SPI_Transmit_IT(ADXL345_SPI, (uint8_t *) &WriteData, 2);
 	while(1)
 	{
 		if(ADXL345_To_Slave_OK == 1)
@@ -36,6 +40,7 @@ void regWrite(uint8_t Reg, uint8_t Value)
 			break;
 		}
 	}
+	HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
 	//HAL_I2C_Mem_Write(&hi2c1, ADXL345_I2C_SLAVE_ADDRESS, Reg, 1, Value, 1, 10);  or using this.
 }
 
@@ -59,7 +64,18 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 void regRead(uint8_t Reg, uint8_t *Value, uint16_t ByteSize)
 {
 
-	HAL_SPI_Transmit_IT(&ADXL345_SPI, (uint8_t *) &Reg, 1);
+	if (ByteSize > 1)
+	{
+		Reg |= 1<<7u | 1<<6u;
+	}
+	else
+	{
+		Reg |= 1<<7u & ( ~(1<<6u) );
+	}
+
+	HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
+
+	HAL_SPI_Transmit_IT(ADXL345_SPI, (uint8_t *) &Reg, 1);
 	while(1)
 	{
 		if(ADXL345_To_Slave_OK == 1)
@@ -68,7 +84,7 @@ void regRead(uint8_t Reg, uint8_t *Value, uint16_t ByteSize)
 			break;
 		}
 	}
-	HAL_SPI_Receive_IT(&ADXL345_SPI, Value, ByteSize);
+	HAL_SPI_Receive_IT(ADXL345_SPI, Value, ByteSize);
 	while(1)
 	{
 		if(ADXL345_To_Master_OK == 1)
@@ -77,7 +93,7 @@ void regRead(uint8_t Reg, uint8_t *Value, uint16_t ByteSize)
 			break;
 		}
 	}
-
+	HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
 	//HAL_I2C_Master_Transmit(&hi2c1, ADXL345_I2C_SLAVE_ADDRESS, &Reg, 1, 100);
 	//HAL_I2C_Master_Receive(&hi2c1, ADXL345_I2C_SLAVE_ADDRESS, Value, 1, 100);	or using these.
 
@@ -97,13 +113,12 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
  *
  * @retval ADXL_Status
  */
-ADXL_Status ADXL345_Init(ADXL_ConfigTypeDef_t *ADXL, SPI_HandleTypeDef SPIHandle)
+ADXL_Status ADXL345_Init(ADXL_ConfigTypeDef_t *ADXL, SPI_HandleTypeDef *hspi)
 {
-	memcpy(&ADXL345_SPI, &SPIHandle, sizeof(SPIHandle));
+	ADXL345_SPI = hspi;
 
 	uint8_t testDEVID;
 	regRead(DEVID_ID, &testDEVID,1);
-
 	if(testDEVID != 0xE5)
 	{
 		return ADXL_ERR;
@@ -127,7 +142,7 @@ ADXL_Status ADXL345_Init(ADXL_ConfigTypeDef_t *ADXL, SPI_HandleTypeDef SPIHandle
 		}
 	}
 
-	regBWRate = ( (ADXL->PowerMode << 4u) | ADXL->BWRate);
+	regBWRate = ( ADXL->PowerMode | ADXL->BWRate);
 
 	regWrite(BW_RATE, regBWRate);
 
@@ -137,15 +152,15 @@ ADXL_Status ADXL345_Init(ADXL_ConfigTypeDef_t *ADXL, SPI_HandleTypeDef SPIHandle
 
 	regWrite(POWER_CTL, regValue);
 
-	regValue |= (ADXL->AutoSleepConfig.AutoSleep << 4u) | ADXL->WakeUpRate;
+//	regValue |= ADXL->AutoSleepConfig.AutoSleep | ADXL->WakeUpRate;
 
-	regWrite(POWER_CTL, regValue);
+//	regWrite(POWER_CTL, regValue);
 
 	regWrite(THRESH_INACT,0x00);
 	regWrite(TIME_INACT,0x00);
 
-	regWrite(THRESH_INACT,ADXL->AutoSleepConfig.ThreshInact);
-	regWrite(TIME_INACT,ADXL->AutoSleepConfig.TimeInact);
+//	regWrite(THRESH_INACT,ADXL->AutoSleepConfig.ThreshInact);
+//	regWrite(TIME_INACT,ADXL->AutoSleepConfig.TimeInact);
 
 	/********* Data Format Config ********/
 
@@ -153,7 +168,9 @@ ADXL_Status ADXL345_Init(ADXL_ConfigTypeDef_t *ADXL, SPI_HandleTypeDef SPIHandle
 
 	regWrite(DATA_FORMAT, regValue);
 
-	regValue = (ADXL->Format.Resolution | ADXL->Format.Range | (ADXL->Format.IntInvert << 4u) | (ADXL->Format.SPI_Mode << 4u));
+	regValue = (ADXL->Format.Resolution | ADXL->Format.Range | ADXL->Format.IntInvert | ADXL->Format.SPI_Mode);
+
+	regWrite(DATA_FORMAT, regValue);
 
 	if(ADXL->Format.Resolution == RESFULL || ADXL->Format.Range == RANGE_2G)
 	{
@@ -194,10 +211,11 @@ ADXL_Status ADXL345_Init(ADXL_ConfigTypeDef_t *ADXL, SPI_HandleTypeDef SPIHandle
  */
 int16_t ADXL345_GetValue(uint8_t Axis)
 {
-	uint8_t Data[2] = { 0 };
+	uint8_t Data[2] = { 0, 0 };
 	int16_t OutputData;
 
-	regRead(Axis, Data, 2);
+	regRead(Axis, &Data[0], 1);
+	regRead(Axis+1, &Data[1], 1);
 
 	OutputData = ((Data[1] << 8) | Data[0]);
 
@@ -217,7 +235,7 @@ float ADXL345_GetGValue(uint8_t Axis)
 
 	OutputData = ADXL345_GetValue(Axis);
 
-	OutputData = (float)(OutputData * ScaleFactor);
+	OutputData = (float)(OutputData * ScaleFactor * M_G);
 
 	return OutputData;
 }

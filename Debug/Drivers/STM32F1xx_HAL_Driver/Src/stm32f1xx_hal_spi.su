@@ -2,6 +2,8 @@ stm32f1xx_hal_spi.c:335:19:HAL_SPI_Init	16	static
 stm32f1xx_hal_spi.c:463:19:HAL_SPI_DeInit	16	static
 stm32f1xx_hal_spi.c:507:13:HAL_SPI_MspInit	16	static
 stm32f1xx_hal_spi.c:523:13:HAL_SPI_MspDeInit	16	static
+stm32f1xx_hal_spi.c:543:19:HAL_SPI_RegisterCallback	32	static
+stm32f1xx_hal_spi.c:654:19:HAL_SPI_UnRegisterCallback	24	static
 stm32f1xx_hal_spi.c:795:19:HAL_SPI_Transmit	40	static
 stm32f1xx_hal_spi.c:960:19:HAL_SPI_Receive	40	static
 stm32f1xx_hal_spi.c:1174:19:HAL_SPI_TransmitReceive	56	static

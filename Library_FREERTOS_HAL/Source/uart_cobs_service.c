@@ -1,3 +1,5 @@
+#include "main.h"
+#include "stm32f1xx_hal.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"

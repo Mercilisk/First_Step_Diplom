@@ -1,5 +1,5 @@
 Library_ADXL345/Source/ADXL345.o: ../Library_ADXL345/Source/ADXL345.c \
- F:/STM32CubeIDE/Projects/First_Step_Diplom/Library_ADXL345/Include/ADXL345.h \
+ F:/STM32CubeIDE/Projects/Diplom_First_Step/Library_ADXL345/Include/ADXL345.h \
  ../Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f1xx.h \
  ../Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f103xb.h \
  ../Drivers/CMSIS/Include/core_cm3.h \
@@ -25,9 +25,10 @@ Library_ADXL345/Source/ADXL345.o: ../Library_ADXL345/Source/ADXL345.c \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h \
- ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
+ ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h \
+ ../Core/Inc/main.h
 
-F:/STM32CubeIDE/Projects/First_Step_Diplom/Library_ADXL345/Include/ADXL345.h:
+F:/STM32CubeIDE/Projects/Diplom_First_Step/Library_ADXL345/Include/ADXL345.h:
 
 ../Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f1xx.h:
 
@@ -80,3 +81,5 @@ F:/STM32CubeIDE/Projects/First_Step_Diplom/Library_ADXL345/Include/ADXL345.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h:
 
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h:
+
+../Core/Inc/main.h:

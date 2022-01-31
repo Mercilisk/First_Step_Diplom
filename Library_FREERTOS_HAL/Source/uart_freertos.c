@@ -1,5 +1,6 @@
 
 /* FreeRTOS */
+#include "stm32f1xx_hal.h"
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "stm32f1xx_hal_uart.h"
@@ -390,7 +391,7 @@ void uart_freertos_rx_idle_callback(UART_HandleTypeDef *huart)
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 	struct uart_rtos_list *item = uart_rtos_list_find_item(huart);
 	if(item == NULL) return;
-	READ_REG(huart->Instance->RDR);
+	READ_REG(huart->Instance->DR);
 	xSemaphoreGiveFromISR(item->uart_rtos->rx_complete,	&xHigherPriorityTaskWoken);
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }

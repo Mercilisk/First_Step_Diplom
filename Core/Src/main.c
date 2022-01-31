@@ -35,8 +35,12 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+
+/*	HAL_FREERTOS	*/
+#include 	"uart_cobs_service.h"
+#include 	"uart_freertos.h"
+/*	Acceleration sensor	*/
 #include 	"ADXL345.h"
-//#include 	"uart_cobs_service.h"
 
 #define 	Debug_Active
 
@@ -67,27 +71,10 @@ SPI_HandleTypeDef hspi2;
 
 UART_HandleTypeDef huart2;
 
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .stack_size = 1024 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for Output_Queue */
-osMessageQueueId_t Output_QueueHandle;
-const osMessageQueueAttr_t Output_Queue_attributes = {
-  .name = "Output_Queue"
-};
-/* Definitions for Input_Queue */
-osMessageQueueId_t Input_QueueHandle;
-const osMessageQueueAttr_t Input_Queue_attributes = {
-  .name = "Input_Queue"
-};
+osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
 
-
-//uart_cobs_service_t *Cobs_UART_Init;
+uart_cobs_service_t Cobs_UART;
 
 /* USER CODE END PV */
 
@@ -96,11 +83,11 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_SPI2_Init(void);
-void ADXL345_Data_Collector_Task(void *argument);
+void ADXL345_Data_Collector_Task(void const * argument);
 
 /* USER CODE BEGIN PFP */
 void ADXL345_Config(void);
-//void UART_Cobs_Config(QueueHandle_t Input_Queue, QueueHandle_t Output_Queue);
+void UART_Cobs_Config(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -142,9 +129,6 @@ int main(void)
 
   /* USER CODE END 2 */
 
-  /* Init scheduler */
-  osKernelInitialize();
-
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
@@ -157,28 +141,19 @@ int main(void)
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
-  /* Create the queue(s) */
-  /* creation of Output_Queue */
-  Output_QueueHandle = osMessageQueueNew (1, sizeof(float), &Output_Queue_attributes);
-
-  /* creation of Input_Queue */
-  Input_QueueHandle = osMessageQueueNew (1, sizeof(float), &Input_Queue_attributes);
-
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(ADXL345_Data_Collector_Task, NULL, &defaultTask_attributes);
+  /* definition and creation of defaultTask */
+  osThreadDef(defaultTask, ADXL345_Data_Collector_Task, osPriorityNormal, 0, 1024);
+  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  UART_Cobs_Config();
   /* USER CODE END RTOS_THREADS */
-
-  /* USER CODE BEGIN RTOS_EVENTS */
-  /* add events, ... */
-  /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
   osKernelStart();
@@ -253,8 +228,8 @@ static void MX_SPI2_Init(void)
   hspi2.Init.Mode = SPI_MODE_MASTER;
   hspi2.Init.Direction = SPI_DIRECTION_2LINES;
   hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi2.Init.CLKPolarity = SPI_POLARITY_HIGH;
+  hspi2.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi2.Init.NSS = SPI_NSS_SOFT;
   hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
   hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
@@ -357,7 +332,7 @@ void ADXL345_Config()
 	ADXL_ConfigTypeDef_t ADXL 					=	{0};
 
 	ADXL.PowerMode 								= 	NormalPower;
-	ADXL.BWRate	 								=	BWRATE_1600;
+	ADXL.BWRate	 								=	BWRATE_400;
 	ADXL.WakeUpRate 							=	WakeUpRate_8;
 	ADXL.AutoSleepConfig.AutoSleep 				=	AutoSleepOFF;
 	ADXL.AutoSleepConfig.ThreshInact 			=	10;
@@ -367,9 +342,9 @@ void ADXL345_Config()
 	ADXL.Format.IntInvert 						=	ACTIVE_HIGH;
 	ADXL.Format.SPI_Mode 						=	FORE_WIRE_MODE;
 	/*Configure GPIO pin Output Level */
-	HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
 #ifdef 	Debug_Active
-	ADXL_Status ADXLStatus 						= 	ADXL345_Init(&ADXL, hspi2);
+	ADXL_Status ADXLStatus 						= 	ADXL345_Init(&ADXL, &hspi2);
 	if (ADXLStatus == ADXL_ERR)
 	{
 		perror("Error: Accelerometer is not found");
@@ -390,19 +365,22 @@ void ADXL345_Config()
 
 }
 
-/*void UART_Cobs_Config(QueueHandle_t Input_Queue, QueueHandle_t Output_Queue)
+void UART_Cobs_Config(void)
 {
 
-	Cobs_UART_Init -> huart  					=	huart2;
-	Cobs_UART_Init -> max_frame_size			=	Length_Realization;
-	Cobs_UART_Init -> queue_depth				=	1;
-	Cobs_UART_Init -> mode						=	UART_COBS_INTERRUPT;
-	Cobs_UART_Init -> input_queue 				=	Input_Queue;
-	Cobs_UART_Init -> output_queue 				=	Output_Queue;
+	Cobs_UART.huart -> huart						=	(UART_HandleTypeDef *) &huart2;
+	Cobs_UART.max_frame_size 						=	(size_t) Length_Realization;
+	Cobs_UART.queue_depth 							=	1;
+	uart_cobs_service_tx_create(					"Task_uart_cobs_service_tx",
+													osPriorityNormal,
+													0,
+													724,
+													&Cobs_UART
+								);
+	uart_freertos_init(								Cobs_UART.huart
+					  );
 
-
-
-}*/
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_ADXL345_Data_Collector_Task */
@@ -412,7 +390,7 @@ void ADXL345_Config()
   * @retval None
   */
 /* USER CODE END Header_ADXL345_Data_Collector_Task */
-void ADXL345_Data_Collector_Task(void *argument)
+void ADXL345_Data_Collector_Task(void const * argument)
 {
   /* USER CODE BEGIN 5 */
 
@@ -420,19 +398,17 @@ void ADXL345_Data_Collector_Task(void *argument)
 
 	float	Signal[Length_Realization] 			=	{0};
 
-	//UART_Cobs_Config( (QueueHandle_t) Input_QueueHandle, (QueueHandle_t) Output_QueueHandle);
-
 	/* Infinite loop */
 	for(uint16_t Index_Count = 0;; Index_Count++)
 	{
-		//	Записать данные в очередь, когдв буфер переполниться
+		//	Записать данные в очередь, когда буфер переполниться
 		if (Index_Count > Length_Realization)
 		{
 			Index_Count = 0;
-
+			uart_cobs_send(&Cobs_UART, &Signal, Length_Realization, 10 * portTICK_PERIOD_MS);
 		}
 
-		Signal[Index_Count] 					=	ADXL345_GetGValue(Zaxis);
+		Signal[Index_Count] 					=	ADXL345_GetGValue(Yaxis);
 	}
   /* USER CODE END 5 */
 }
