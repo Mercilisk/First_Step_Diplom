@@ -147,7 +147,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, ADXL345_Data_Collector_Task, osPriorityNormal, 0, 1024);
+  osThreadDef(defaultTask, ADXL345_Data_Collector_Task, osPriorityNormal, 0, 2048);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -368,17 +368,19 @@ void ADXL345_Config()
 void UART_Cobs_Config(void)
 {
 
-	Cobs_UART.huart -> huart						=	(UART_HandleTypeDef *) &huart2;
-	Cobs_UART.max_frame_size 						=	(size_t) Length_Realization;
-	Cobs_UART.queue_depth 							=	1;
 	uart_cobs_service_tx_create(					"Task_uart_cobs_service_tx",
 													osPriorityNormal,
 													0,
 													724,
 													&Cobs_UART
 								);
+	Cobs_UART.huart 								=	(uart_freertos_t*) pvPortMalloc(sizeof(uart_freertos_t));
 	uart_freertos_init(								Cobs_UART.huart
 					  );
+	Cobs_UART.max_frame_size 						=	(size_t) Length_Realization;
+	Cobs_UART.huart -> huart						=	(UART_HandleTypeDef *) &huart2;
+	Cobs_UART.queue_depth 							=	1;
+	Cobs_UART.mode 									=	UART_COBS_INTERRUPT;
 
 }
 /* USER CODE END 4 */
