@@ -214,6 +214,11 @@ typedef struct
 	ADXL_ConfigFormat_t Format;
 }ADXL_ConfigTypeDef_t;
 
+/*typedef struct
+{
+	uint8_t NumberInterupt;
+	uint8_t	IntInvert;
+}ADXL_Config_InteruptTypDef_t;*/
 
 /* Register Write and Read Function Prototype */
 void regWrite(uint8_t Reg, uint8_t Value);

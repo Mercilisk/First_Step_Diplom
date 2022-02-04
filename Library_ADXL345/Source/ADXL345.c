@@ -544,6 +544,13 @@ void ADXL345_INTEnable(Function_State Status, uint8_t Int_Type)
 			regValue &= ~(Int_Type);
 
 			regWrite(INT_ENABLE, regValue);
+
+			regRead(INT_MAP, &regValue, 1);
+
+			regValue &= ~(Int_Type);
+
+			regWrite(INT_MAP, regValue);
+
 			break;
 		}
 	}
@@ -575,7 +582,7 @@ void ADXL345_INTMapping(Mapping_State Pin, uint8_t Int_Type)
 		{
 			regRead(INT_MAP, &regValue, 1);
 
-			regValue &= ~(Int_Type);
+			regValue |= (Int_Type);
 
 			regWrite(INT_MAP, regValue);
 			break;

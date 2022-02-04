@@ -72,6 +72,7 @@ SPI_HandleTypeDef hspi2;
 UART_HandleTypeDef huart2;
 
 osThreadId defaultTaskHandle;
+osSemaphoreId DataReloadHandle;
 /* USER CODE BEGIN PV */
 
 uart_cobs_service_t Cobs_UART;
@@ -132,6 +133,11 @@ int main(void)
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
+
+  /* Create the semaphores(s) */
+  /* definition and creation of DataReload */
+  osSemaphoreDef(DataReload);
+  DataReloadHandle = osSemaphoreCreate(osSemaphore(DataReload), 1);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -313,6 +319,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(Green_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : Accelerometer_INT2_Pin */
+  GPIO_InitStruct.Pin = Accelerometer_INT2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(Accelerometer_INT2_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pin : SPI_CS_Pin */
   GPIO_InitStruct.Pin = SPI_CS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -361,6 +373,10 @@ void ADXL345_Config()
 	}
 #endif
 
+	/*	Interupt init	 */
+	ADXL345_INTMapping(INT2, DATA_READY);
+	ADXL345_INTEnable(ON, DATA_READY);
+
 	ADXL345_MeasureON();
 
 }
@@ -382,6 +398,14 @@ void UART_Cobs_Config(void)
 	Cobs_UART.queue_depth 							=	1;
 	Cobs_UART.mode 									=	UART_COBS_INTERRUPT;
 
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if (GPIO_Pin == Accelerometer_INT2_Pin)
+	{
+		xSemaphoreGive(DataReloadHandle);
+	}
 }
 /* USER CODE END 4 */
 
@@ -409,7 +433,7 @@ void ADXL345_Data_Collector_Task(void const * argument)
 			Index_Count = 0;
 			uart_cobs_send(&Cobs_UART, &Signal, Length_Realization, 10 * portTICK_PERIOD_MS);
 		}
-
+		xSemaphoreTake(DataReloadHandle, portMAX_DELAY);
 		Signal[Index_Count] 					=	ADXL345_GetGValue(Yaxis);
 	}
   /* USER CODE END 5 */

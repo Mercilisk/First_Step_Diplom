@@ -17,6 +17,6 @@ ADXL345.c:454:6:ADXL345_ActivityConfig	24	static
 ADXL345.c:479:6:ADXL345_InactivityConfig	24	static
 ADXL345.c:504:6:ADXL345_FreeFallConfig	16	static
 ADXL345.c:523:6:ADXL345_INTEnable	24	static
-ADXL345.c:561:6:ADXL345_INTMapping	24	static
-ADXL345.c:601:12:ADXL345_INTRead	24	static
-ADXL345.c:624:6:ADXL345_SelfTestStatus	24	static
+ADXL345.c:568:6:ADXL345_INTMapping	24	static
+ADXL345.c:608:12:ADXL345_INTRead	24	static
+ADXL345.c:631:6:ADXL345_SelfTestStatus	24	static

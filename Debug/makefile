@@ -41,34 +41,34 @@ $(wildcard ../makefile.init) \
 $(wildcard ../makefile.targets) \
 
 
-BUILD_ARTIFACT_NAME := Diplom_First_Step
+BUILD_ARTIFACT_NAME := First_Step_Diplom
 BUILD_ARTIFACT_EXTENSION := elf
 BUILD_ARTIFACT_PREFIX :=
 BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME)$(if $(BUILD_ARTIFACT_EXTENSION),.$(BUILD_ARTIFACT_EXTENSION),)
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-Diplom_First_Step.elf \
+First_Step_Diplom.elf \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-Diplom_First_Step.list \
+First_Step_Diplom.list \
 
 OBJCOPY_BIN += \
-Diplom_First_Step.bin \
+First_Step_Diplom.bin \
 
 
 # All Target
 all: main-build
 
 # Main-build Target
-main-build: Diplom_First_Step.elf secondary-outputs
+main-build: First_Step_Diplom.elf secondary-outputs
 
 # Tool invocations
-Diplom_First_Step.elf: $(OBJS) $(USER_OBJS) C:\Users\Professional\Desktop\AShershunovich-RF18\First_Step_Diplom\STM32F103RBTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Diplom_First_Step.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"C:\Users\Professional\Desktop\AShershunovich-RF18\First_Step_Diplom\STM32F103RBTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Diplom_First_Step.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+First_Step_Diplom.elf: $(OBJS) $(USER_OBJS) F:\STM32CubeIDE\Projects\First_Step_Diplom\STM32F103RBTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "First_Step_Diplom.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"F:\STM32CubeIDE\Projects\First_Step_Diplom\STM32F103RBTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="First_Step_Diplom.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -77,19 +77,19 @@ default.size.stdout: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-Diplom_First_Step.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "Diplom_First_Step.list"
+First_Step_Diplom.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "First_Step_Diplom.list"
 	@echo 'Finished building: $@'
 	@echo ' '
 
-Diplom_First_Step.bin: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objcopy  -O binary $(EXECUTABLES) "Diplom_First_Step.bin"
+First_Step_Diplom.bin: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objcopy  -O binary $(EXECUTABLES) "First_Step_Diplom.bin"
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(SIZE_OUTPUT)$(OBJDUMP_LIST)$(EXECUTABLES)$(OBJS)$(S_DEPS)$(S_UPPER_DEPS)$(C_DEPS)$(OBJCOPY_BIN) Diplom_First_Step.elf
+	-$(RM) $(SIZE_OUTPUT)$(OBJDUMP_LIST)$(EXECUTABLES)$(OBJS)$(S_DEPS)$(S_UPPER_DEPS)$(C_DEPS)$(OBJCOPY_BIN) First_Step_Diplom.elf
 	-@echo ' '
 
 secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST) $(OBJCOPY_BIN)
