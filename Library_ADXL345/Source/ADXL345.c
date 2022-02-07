@@ -5,12 +5,29 @@
  *      Author: Ümit Can Güveren
  */
 #include "ADXL345.h"
+#include "main.h"
+#include "stm32f1xx_hal.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "cmsis_os.h"
+#include "stm32f1xx_hal_spi.h"
 
 static SPI_HandleTypeDef *ADXL345_SPI;
 
 #define M_G 9.80665
 
 float ScaleFactor = 1/256.0f;
+
+uint8_t	Flag_State_DMA_Collbeck 	=	0;
+
+#define DMA_Enable
+
+#ifdef DMA_Enable
+	osSemaphoreId DataReceiveEndDMAHandler;
+#else
+
+#endif
 
 uint8_t 	ADXL345_To_Slave_OK		=	0;
 uint8_t 	ADXL345_To_Master_OK	=	0;
@@ -100,7 +117,12 @@ void regRead(uint8_t Reg, uint8_t *Value, uint16_t ByteSize)
 }
 void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 {
-	if (hspi -> Instance == SPI2)
+	if (hspi -> Instance == SPI2 && Flag_State_DMA_Collbeck == 1)
+	{
+		Flag_State_DMA_Collbeck 	=	0;
+		xSemaphoreGiveFromISR(DataReceiveEndDMAHandler, NULL);
+	}
+	else
 	{
 		ADXL345_To_Master_OK 		=	1;
 	}
@@ -115,6 +137,12 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
  */
 ADXL_Status ADXL345_Init(ADXL_ConfigTypeDef_t *ADXL, SPI_HandleTypeDef *hspi)
 {
+#ifdef DMA_Enable
+	 osSemaphoreDef(DataReceiveEndDMA);
+	 DataReceiveEndDMAHandler = osSemaphoreCreate(osSemaphore(DataReceiveEndDMA), 1);
+	 xSemaphoreTake(DataReceiveEndDMAHandler, portMAX_DELAY);
+#else
+#endif
 	ADXL345_SPI = hspi;
 
 	uint8_t testDEVID;
@@ -544,6 +572,13 @@ void ADXL345_INTEnable(Function_State Status, uint8_t Int_Type)
 			regValue &= ~(Int_Type);
 
 			regWrite(INT_ENABLE, regValue);
+
+			regRead(INT_MAP, &regValue, 1);
+
+			regValue &= ~(Int_Type);
+
+			regWrite(INT_MAP, regValue);
+
 			break;
 		}
 	}
@@ -575,7 +610,7 @@ void ADXL345_INTMapping(Mapping_State Pin, uint8_t Int_Type)
 		{
 			regRead(INT_MAP, &regValue, 1);
 
-			regValue &= ~(Int_Type);
+			regValue |= (Int_Type);
 
 			regWrite(INT_MAP, regValue);
 			break;
