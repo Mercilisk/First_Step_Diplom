@@ -1786,16 +1786,16 @@ HAL_StatusTypeDef HAL_SPI_Receive_DMA(SPI_HandleTypeDef *hspi, uint8_t *pData, u
   /* Check rx dma handle */
   assert_param(IS_SPI_DMA_HANDLE(hspi->hdmarx));
 
-  if ((hspi->Init.Direction == SPI_DIRECTION_2LINES) && (hspi->Init.Mode == SPI_MODE_MASTER))
+  /*if ((hspi->Init.Direction == SPI_DIRECTION_2LINES) && (hspi->Init.Mode == SPI_MODE_MASTER))
   {
-    hspi->State = HAL_SPI_STATE_BUSY_RX;
+    hspi->State = HAL_SPI_STATE_BUSY_RX;*/
 
     /* Check tx dma handle */
-    assert_param(IS_SPI_DMA_HANDLE(hspi->hdmatx));
+    //assert_param(IS_SPI_DMA_HANDLE(hspi->hdmatx));
 
     /* Call transmit-receive function to send Dummy data on Tx line and generate clock on CLK line */
-    return HAL_SPI_TransmitReceive_DMA(hspi, pData, pData, Size);
-  }
+    /*return HAL_SPI_TransmitReceive_DMA(hspi, pData, pData, Size);
+  }*/
 
   /* Process Locked */
   __HAL_LOCK(hspi);
