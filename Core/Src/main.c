@@ -72,9 +72,11 @@ SPI_HandleTypeDef hspi2;
 UART_HandleTypeDef huart2;
 
 osThreadId defaultTaskHandle;
+osSemaphoreId DataReloadInAccelerometerHandle;
 /* USER CODE BEGIN PV */
 
-uart_cobs_service_t Cobs_UART;
+ADXL_ConfigTypeDef_t 	ADXL;
+uart_cobs_service_t 	Cobs_UART;
 
 /* USER CODE END PV */
 
@@ -126,15 +128,21 @@ int main(void)
   MX_USART2_UART_Init();
   MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
-
+  /*	Deactivate IRQ then control Input and Output Transaction	*/
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
 
+  /* Create the semaphores(s) */
+  /* definition and creation of DataReloadInAccelerometer */
+  osSemaphoreDef(DataReloadInAccelerometer);
+  DataReloadInAccelerometerHandle = osSemaphoreCreate(osSemaphore(DataReloadInAccelerometer), 1);
+
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
+  xSemaphoreTake(DataReloadInAccelerometerHandle, portMAX_DELAY);
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
@@ -241,7 +249,6 @@ static void MX_SPI2_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN SPI2_Init 2 */
-
   /* USER CODE END SPI2_Init 2 */
 
 }
@@ -274,7 +281,6 @@ static void MX_USART2_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART2_Init 2 */
-
   /* USER CODE END USART2_Init 2 */
 
 }
@@ -313,6 +319,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(Green_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : Accelerometer_INT2_Pin */
+  GPIO_InitStruct.Pin = Accelerometer_INT2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(Accelerometer_INT2_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pin : SPI_CS_Pin */
   GPIO_InitStruct.Pin = SPI_CS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -329,10 +341,9 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void ADXL345_Config()
 {
-	ADXL_ConfigTypeDef_t ADXL 					=	{0};
 
 	ADXL.PowerMode 								= 	NormalPower;
-	ADXL.BWRate	 								=	BWRATE_400;
+	ADXL.BWRate	 								=	BWRATE_1600;
 	ADXL.WakeUpRate 							=	WakeUpRate_8;
 	ADXL.AutoSleepConfig.AutoSleep 				=	AutoSleepOFF;
 	ADXL.AutoSleepConfig.ThreshInact 			=	10;
@@ -361,6 +372,10 @@ void ADXL345_Config()
 	}
 #endif
 
+	/* Interupt Configuration	*/
+	ADXL345_INTMapping(INT2, DATA_READY);
+	ADXL345_INTEnable(INT2, DATA_READY);
+
 	ADXL345_MeasureON();
 
 }
@@ -383,6 +398,16 @@ void UART_Cobs_Config(void)
 	Cobs_UART.mode 									=	UART_COBS_INTERRUPT;
 
 }
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if (GPIO_Pin == Accelerometer_INT2_Pin)
+	{
+		xSemaphoreGiveFromISR(DataReloadInAccelerometerHandle, NULL);
+	}
+}
+
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_ADXL345_Data_Collector_Task */
@@ -398,7 +423,9 @@ void ADXL345_Data_Collector_Task(void const * argument)
 
 	ADXL345_Config();
 
-	float	Signal[Length_Realization] 			=	{0};
+	float	Signal[Length_Realization] 				=	{0};
+
+	ADXL.Length_Buf_Completed 						=	0;
 
 	/* Infinite loop */
 	for(uint16_t Index_Count = 0;; Index_Count++)
@@ -409,8 +436,10 @@ void ADXL345_Data_Collector_Task(void const * argument)
 			Index_Count = 0;
 			uart_cobs_send(&Cobs_UART, &Signal, Length_Realization, 10 * portTICK_PERIOD_MS);
 		}
+		xSemaphoreTake(DataReloadInAccelerometerHandle, portMAX_DELAY);
 
-		Signal[Index_Count] 					=	ADXL345_GetGValue(Yaxis);
+		Signal[Index_Count]	=	ADXL345_GetGValue(Yaxis);
+
 	}
   /* USER CODE END 5 */
 }

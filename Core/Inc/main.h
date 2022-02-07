@@ -32,7 +32,6 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -67,6 +66,9 @@ void Error_Handler(void);
 #define USART_RX_GPIO_Port GPIOA
 #define Green_Pin GPIO_PIN_5
 #define Green_GPIO_Port GPIOA
+#define Accelerometer_INT2_Pin GPIO_PIN_10
+#define Accelerometer_INT2_GPIO_Port GPIOA
+#define Accelerometer_INT2_EXTI_IRQn EXTI15_10_IRQn
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14

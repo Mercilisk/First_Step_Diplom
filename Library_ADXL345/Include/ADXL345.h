@@ -12,9 +12,13 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include "stm32f1xx.h"
-#include "stm32f1xx_hal_spi.h"
 #include "main.h"
+#include "stm32f1xx_hal.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "cmsis_os.h"
+#include "stm32f1xx_hal_spi.h"
 
 #define ADXL345_DEVICE_ADDRESS	  0x53
 
@@ -207,12 +211,16 @@ typedef struct
 
 typedef struct
 {
-	uint8_t PowerMode;   	/* Power Mode Select	   @def_group Power_Modes 										 */
-	uint8_t BWRate;			/* Output Data Rate Select @def_group Rate_Select	    								 */
-	uint8_t WakeUpRate;		/* Wake Up Rate Select	   @def_group WakeUp_Select	   									 */
+	uint8_t 	PowerMode;  /* 	Power Mode Select	   			@def_group Power_Modes								 */
+	uint8_t 	BWRate;		/* 	Output Data Rate Select 		@def_group Rate_Select	 							 */
+	uint8_t 	WakeUpRate;	/*	Wake Up Rate Select	   			@def_group WakeUp_Select	   						 */
+	uint8_t 	FIFO_SAMPLES_BIT;
+	uint16_t	Length_Buf_Completed;
 	ADXL_ConfigAutoSleep_t AutoSleepConfig;
 	ADXL_ConfigFormat_t Format;
 }ADXL_ConfigTypeDef_t;
+
+
 
 
 /* Register Write and Read Function Prototype */
