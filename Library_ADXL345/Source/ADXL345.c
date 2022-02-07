@@ -5,6 +5,13 @@
  *      Author: Ümit Can Güveren
  */
 #include "ADXL345.h"
+#include "main.h"
+#include "stm32f1xx_hal.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "cmsis_os.h"
+#include "stm32f1xx_hal_spi.h"
 
 static SPI_HandleTypeDef *ADXL345_SPI;
 
@@ -14,6 +21,14 @@ float ScaleFactor = 1/256.0f;
 
 uint8_t 	ADXL345_To_Slave_OK		=	0;
 uint8_t 	ADXL345_To_Master_OK	=	0;
+
+uint8_t		Flag_State_DMA_Callback	=	0;
+
+#define DMA_Enable
+#ifdef DMA_Enable
+	osSemaphoreId Data_Receive_End_DMA_Handler;
+#else
+#endif
 /*
  * @brief regWrite, Writes to ADXL Register using I2C
  * @param Reg = ADXL345 Register Address
@@ -100,9 +115,14 @@ void regRead(uint8_t Reg, uint8_t *Value, uint16_t ByteSize)
 }
 void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 {
-	if (hspi -> Instance == SPI2)
+	if (hspi -> Instance == SPI2 && Flag_State_DMA_Callback == 1)
 	{
-		ADXL345_To_Master_OK 		=	1;
+		Flag_State_DMA_Callback					=	0;
+		xSemaphoreGiveFromISR(Data_Receive_End_DMA_Handler, NULL);
+	}
+	else
+	{
+		ADXL345_To_Master_OK						=	1;
 	}
 }
 /*
@@ -115,6 +135,12 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
  */
 ADXL_Status ADXL345_Init(ADXL_ConfigTypeDef_t *ADXL, SPI_HandleTypeDef *hspi)
 {
+#ifdef DMA_Enable
+	osSemaphoreDef(Data_Receive_End_DMA);
+	Data_Receive_End_DMA_Handler = osSemaphoreCreate(osSemaphore(Data_Receive_End_DMA), 1);
+	xSemaphoreTake(Data_Receive_End_DMA_Handler, portMAX_DELAY);
+#else
+#endif
 	ADXL345_SPI = hspi;
 
 	uint8_t testDEVID;
@@ -659,3 +685,49 @@ void ADXL345_SelfTestStatus(Function_State Status)
 }
 */
 
+void ADXL345_GetValue_from_DMA(uint8_t *pData, uint16_t Size, uint8_t	Axis)
+{
+
+	if (Size > 1)
+	{
+		Axis |= 1<<7u | 1<<6u;
+	}
+	else
+	{
+		Axis |= 1<<7u & ( ~(1<<6u) );
+	}
+
+	HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
+
+	HAL_SPI_Transmit_IT(ADXL345_SPI, (uint8_t *) &Axis, 1);
+	while(1)
+	{
+		if(ADXL345_To_Slave_OK == 1)
+		{
+			ADXL345_To_Slave_OK 	=	0;
+			break;
+		}
+	}
+
+	Flag_State_DMA_Callback 		=	1;
+	HAL_SPI_Receive_DMA(ADXL345_SPI, pData, Size);
+		xSemaphoreTake(Data_Receive_End_DMA_Handler, portMAX_DELAY);
+
+	Axis	+=	1;
+	HAL_SPI_Transmit_IT(ADXL345_SPI, (uint8_t *) &Axis, 1);
+	while(1)
+	{
+		if(ADXL345_To_Slave_OK == 1)
+		{
+			ADXL345_To_Slave_OK 	=	0;
+			break;
+		}
+	}
+
+	Flag_State_DMA_Callback 		=	1;
+	HAL_SPI_Receive_DMA(ADXL345_SPI, pData + 1, Size);
+		xSemaphoreTake(Data_Receive_End_DMA_Handler, portMAX_DELAY);
+
+	HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
+
+}

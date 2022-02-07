@@ -68,6 +68,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi2;
+DMA_HandleTypeDef hdma_spi2_rx;
 
 UART_HandleTypeDef huart2;
 
@@ -82,6 +83,7 @@ uart_cobs_service_t Cobs_UART;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_DMA_Init(void);
 static void MX_SPI2_Init(void);
 void ADXL345_Data_Collector_Task(void const * argument);
 
@@ -124,6 +126,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_DMA_Init();
   MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
 
@@ -241,7 +244,7 @@ static void MX_SPI2_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN SPI2_Init 2 */
-
+  hspi2.hdmarx				=	&hdma_spi2_rx;
   /* USER CODE END SPI2_Init 2 */
 
 }
@@ -280,6 +283,33 @@ static void MX_USART2_UART_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+  hdma_spi2_rx.Instance							=	DMA1_Channel4;
+  hdma_spi2_rx.Init.Direction					=	DMA_PERIPH_TO_MEMORY;
+  hdma_spi2_rx.Init.PeriphInc					=	DMA_PINC_DISABLE;
+  hdma_spi2_rx.Init.MemInc						=	DMA_MINC_ENABLE;
+  hdma_spi2_rx.Init.PeriphDataAlignment			=	DMA_PDATAALIGN_BYTE;
+  hdma_spi2_rx.Init.MemDataAlignment			=	DMA_MDATAALIGN_HALFWORD;
+  hdma_spi2_rx.Init.Mode						=	DMA_NORMAL;
+  hdma_spi2_rx.Init.Priority					=	DMA_PRIORITY_LOW;
+  if (HAL_DMA_Init(&hdma_spi2_rx) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -312,6 +342,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(Green_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PA10 */
+  GPIO_InitStruct.Pin = GPIO_PIN_10;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : SPI_CS_Pin */
   GPIO_InitStruct.Pin = SPI_CS_Pin;
@@ -361,6 +397,15 @@ void ADXL345_Config()
 	}
 #endif
 
+	/*	FIFO Register Config	*/
+#define	FIFO_Mode 		((uint8_t) (1<<6u))
+#define	FIFO_Samples	((uint8_t) (0x1F))
+	regWrite(FIFO_CTL, FIFO_Mode | FIFO_Samples);
+
+	/*	Interupt Config	*/
+	ADXL345_INTMapping(INT2, 	Watermark);
+	ADXL345_INTEnable(ON, 		Watermark);
+
 	ADXL345_MeasureON();
 
 }
@@ -398,7 +443,7 @@ void ADXL345_Data_Collector_Task(void const * argument)
 
 	ADXL345_Config();
 
-	float	Signal[Length_Realization] 			=	{0};
+	uint16_t	Signal[Length_Realization] 			=	{0};
 
 	/* Infinite loop */
 	for(uint16_t Index_Count = 0;; Index_Count++)
@@ -410,7 +455,7 @@ void ADXL345_Data_Collector_Task(void const * argument)
 			uart_cobs_send(&Cobs_UART, &Signal, Length_Realization, 10 * portTICK_PERIOD_MS);
 		}
 
-		Signal[Index_Count] 					=	ADXL345_GetGValue(Yaxis);
+		ADXL345_GetValue_from_DMA((uint8_t *) &Signal, 32, Yaxis);
 	}
   /* USER CODE END 5 */
 }

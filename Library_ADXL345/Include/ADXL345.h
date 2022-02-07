@@ -15,6 +15,10 @@
 #include "stm32f1xx.h"
 #include "stm32f1xx_hal_spi.h"
 #include "main.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "cmsis_os.h"
 
 #define ADXL345_DEVICE_ADDRESS	  0x53
 
@@ -250,5 +254,5 @@ void ADXL345_SelfTestStatus(Function_State Status);
 
 /* Others Function Prototype */
 //uint8_t I2C_ModulAdress_Scan();
-
+void ADXL345_GetValue_from_DMA(uint8_t *pData, uint16_t Size, uint8_t	Axis);
 #endif /* INC_ADXL345_H_ */
